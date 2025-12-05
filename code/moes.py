@@ -110,7 +110,8 @@ class MoE(nn.Module):
         self.register_buffer("biases_N", torch.zeros(N))
 
     def forward(self, x_BSD):
-        B, S, D = x_BSD.shape
+        B = x_BSD.size(0)
+        S = x_BSD.size(1)
         
         # apply router to get weights for each expert
         scores_BSN = self.router(x_BSD)
@@ -125,16 +126,27 @@ class MoE(nn.Module):
         x_MD = einops.rearrange(x_BSD, "B S D -> (B S) D")
         val_MK = einops.rearrange(val_BSK, "B S K -> (B S) K")
         idx_MK = einops.rearrange(idx_BSK, "B S K -> (B S) K")
-        y_MD = torch.zeros_like(x_MD)
 
-        # apply experts batched for efficiency
-        for i, expert in enumerate(self.experts):
-            mask_MK = (idx_MK == i)
-            if not mask_MK.any():
-                continue
-            tok_idx, k_idx = torch.where(mask_MK)
-            out = expert(x_MD[tok_idx])
-            y_MD.index_add_(0, tok_idx, val_MK[tok_idx, k_idx][:, None] * out)
+
+
+        # naive version, apply all experts to all tokens
+        expert_outputs_NMD = torch.stack([expert(x_MD) for expert in self.experts], dim=0)
+        expert_weights_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device)
+        expert_weights_MN.scatter_(1, idx_MK, val_MK)
+        y_MD = torch.einsum('mn,nmd->md', expert_weights_MN, expert_outputs_NMD)
+
+
+        # # sparse version, works faster in theory but slower on mps with small params
+        # y_MD = torch.zeros_like(x_MD)
+        # for i, expert in enumerate(self.experts):
+        #     mask_MK = (idx_MK == i)
+        #     tok_idx, k_idx = torch.where(mask_MK)
+        #     out = expert(x_MD[tok_idx])
+        #     y_MD.index_add_(0, tok_idx, val_MK[tok_idx, k_idx][:, None] * out)
+
+
+
+
 
         # update biases
         if self.training:
