@@ -136,7 +136,7 @@ class MoE(nn.Module):
         y_MD = torch.einsum('mn,nmd->md', expert_weights_MN, expert_outputs_NMD)
 
 
-        # # sparse version, works faster in theory but slower on mps with small params
+        # sparse version, works faster in theory but slower on mps with small params
         # y_MD = torch.zeros_like(x_MD)
         # for i, expert in enumerate(self.experts):
         #     mask_MK = (idx_MK == i)
