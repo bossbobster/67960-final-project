@@ -153,7 +153,7 @@ class MoE(nn.Module):
             counts_N = torch.bincount(idx_MK.flatten(), minlength=self.N).float()
         else:
             s_NM = einops.rearrange(scores_BSN, "B S N -> (B S) N")
-            mask_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device)
+            mask_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device, dtype=torch.int32)
             mask_MN.scatter_(1, idx_MK, 1)
             mask_NM = mask_MN.T
             y_BSD, counts_N = self.momoe(x_BSD, mask_NM, s_NM)
