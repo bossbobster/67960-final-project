@@ -152,7 +152,7 @@ class MoE(nn.Module):
             y_MD = torch.einsum('mn,nmd->md', expert_weights_MN, expert_outputs_NMD)
             counts_N = torch.bincount(idx_MK.flatten(), minlength=self.N).float()
         else:
-            s_NM = einops.rearrange(scores_BSN, "B S N -> (B S) N")
+            s_NM = einops.rearrange(scores_BSN, "B S N -> N (B S)")
             mask_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device, dtype=torch.int32)
             mask_MN.scatter_(1, idx_MK, 1)
             mask_NM = mask_MN.T
