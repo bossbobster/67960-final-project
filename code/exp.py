@@ -101,8 +101,8 @@ print("\n*Data done loading*")
 
 
 
-D = 128
-H = 256
+D = 256
+H = 512
 N = 32
 K = 4
 V = vocab_size

@@ -151,13 +151,13 @@ class MoE(nn.Module):
             expert_weights_MN.scatter_(1, idx_MK, val_MK.float())
             y_MD = torch.einsum('mn,nmd->md', expert_weights_MN, expert_outputs_NMD)
             counts_N = torch.bincount(idx_MK.flatten(), minlength=self.N).float()
-        else:
-            s_NM = einops.rearrange(scores_BSN, "B S N -> N (B S)")
-            mask_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device, dtype=torch.int32)
-            mask_MN.scatter_(1, idx_MK, 1)
-            mask_NM = mask_MN.T
-            y_BSD, counts_N = self.momoe(x_BSD, mask_NM, s_NM)
-            y_MD = einops.rearrange(y_BSD, "B S D -> (B S) D")
+        # else:
+        #     s_NM = einops.rearrange(scores_BSN, "B S N -> N (B S)")
+        #     mask_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device, dtype=torch.int32)
+        #     mask_MN.scatter_(1, idx_MK, 1)
+        #     mask_NM = mask_MN.T
+        #     y_BSD, counts_N = self.momoe(x_BSD, mask_NM, s_NM)
+        #     y_MD = einops.rearrange(y_BSD, "B S D -> (B S) D")
 
 
 
@@ -172,7 +172,7 @@ class MoE(nn.Module):
 
 
         # update biases
-        if self.training:
+        if self.training and self.router.__class__.__name__ == "RegularRouter":
             with torch.no_grad():
                 self.biases_N -= self.bias_rate * (counts_N - counts_N.float().mean()).sign()
 
