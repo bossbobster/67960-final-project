@@ -122,8 +122,8 @@ moe_fns = [
 models = [Transformer(V, D, n_heads, n_layers, moe_fn, max_seq_len).to(device) for moe_fn in moe_fns]
 
 # Convert to BFloat16 on CUDA for mixed precision (momoe requires this)
-if device.type == "cuda":
-    models = [model.to(torch.bfloat16) for model in models]
+# if device.type == "cuda":
+#     models = [model.to(torch.bfloat16) for model in models]
 
 # print number of parameters in each model
 for i, model in enumerate(models):
@@ -191,8 +191,8 @@ for i, (model, name) in enumerate(zip(models, model_names)):
     print(f"{'='*60}")
     
     model = model.to(device)
-    if device.type == "cuda":
-        model = model.to(torch.bfloat16)
+    # if device.type == "cuda":
+    #     model = model.to(torch.bfloat16)
     optimizer = optim.AdamW(model.parameters(), lr=lr)
     
     train_losses = []
@@ -283,8 +283,8 @@ print("="*60)
 
 for model, name in zip(models, model_names):
     model = model.to(device)
-    if device.type == "cuda":
-        model = model.to(torch.bfloat16)
+    # if device.type == "cuda":
+    #     model = model.to(torch.bfloat16)
     model.eval()
     
     with torch.no_grad():
