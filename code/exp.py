@@ -120,6 +120,7 @@ moe_fns = [
     lambda: HashMoE(D, H, N, K)
 ]
 models = [Transformer(V, D, n_heads, n_layers, moe_fn, max_seq_len).to(device) for moe_fn in moe_fns]
+model_names = [moe_fns[i]().__class__.__name__ for i in range(len(moe_fns))]
 
 # Convert to BFloat16 on CUDA for mixed precision (momoe requires this)
 # if device.type == "cuda":
@@ -127,7 +128,7 @@ models = [Transformer(V, D, n_heads, n_layers, moe_fn, max_seq_len).to(device) f
 
 # print number of parameters in each model
 for i, model in enumerate(models):
-    print(f"Model {i+1} ({moe_fns[i]().__class__.__name__}) has {sum(p.numel() for p in model.parameters())} parameters and {sum(p.numel() for p in model.parameters() if p.requires_grad)} trainable parameters")
+    print(f"Model {i+1} ({model_names[i]}) has {sum(p.numel() for p in model.parameters())} parameters and {sum(p.numel() for p in model.parameters() if p.requires_grad)} trainable parameters")
 
 
 def train_epoch(model, loader, optimizer, device):
@@ -181,7 +182,6 @@ def evaluate(model, loader, device):
 # Training config
 num_epochs = 3
 lr = 3e-4
-model_names = [models[i].moe_fn().__class__.__name__ for i in range(len(models))]
 
 # Train each model
 results = {}
@@ -256,7 +256,7 @@ plt.show()
 for i in range(len(models)):
     model = models[i]
     for j, blk in enumerate(model.blocks):
-        print(f"Model {i+1} ({model.moe_fn().__class__.__name__}), Layer {j+1}: {blk.moe.biases_N}")
+        print(f"Model {i+1} ({model_names[i]}), Layer {j+1}: {blk.moe.biases_N}")
 
 
 
@@ -276,26 +276,47 @@ x = tokens[:-1].unsqueeze(0).to(device)  # [1, 128]
 y = tokens[1:].unsqueeze(0).to(device)   # [1, 128]
 mask = (x != tokenizer.pad_token_id)
 
-# Test each model
-print("="*60)
-print("PERPLEXITY RESULTS")
-print("="*60)
+# Save each model to its own place
+import os
+os.makedirs("saved_models", exist_ok=True)
 
-for model, name in zip(models, model_names):
-    model = model.to(device)
-    # if device.type == "cuda":
-    #     model = model.to(torch.bfloat16)
-    model.eval()
-    
-    with torch.no_grad():
-        logits = model(x, mask)  # [1, S, V]
-        loss = F.cross_entropy(logits.view(-1, V), y.view(-1), 
-                               ignore_index=tokenizer.pad_token_id, reduction='mean')
-        perplexity = torch.exp(loss).item()
-    
-    print(f"{name:20s} | Loss: {loss.item():.4f} | Perplexity: {perplexity:.2f}")
-    model = model.cpu()
+for i, model in enumerate(models):
+    checkpoint = {
+        'model_state_dict': model.state_dict(),
+        'model_name': model_names[i],
+        'config': {
+            'V': V, 'D': D, 'H': H, 'N': N, 'K': K,
+            'n_heads': n_heads, 'n_layers': n_layers,
+            'max_seq_len': max_seq_len
+        },
+        'final_train_loss': results[model_names[i]]['final_train_loss'],
+        'final_test_loss': results[model_names[i]]['final_test_loss'],
+    }
+    torch.save(checkpoint, f"saved_models/model_{model_names[i]}.pth")
+    print(f"Saved {model_names[i]} to saved_models/model_{model_names[i]}.pth")
 
-print()
-print("Lower perplexity = better prediction")
-print("(Perplexity measures how 'surprised' the model is by the actual next token)")
+
+
+# # Test each model
+# print("="*60)
+# print("PERPLEXITY RESULTS")
+# print("="*60)
+
+# for model, name in zip(models, model_names):
+#     model = model.to(device)
+#     # if device.type == "cuda":
+#     #     model = model.to(torch.bfloat16)
+#     model.eval()
+    
+#     with torch.no_grad():
+#         logits = model(x, mask)  # [1, S, V]
+#         loss = F.cross_entropy(logits.view(-1, V), y.view(-1), 
+#                                ignore_index=tokenizer.pad_token_id, reduction='mean')
+#         perplexity = torch.exp(loss).item()
+    
+#     print(f"{name:20s} | Loss: {loss.item():.4f} | Perplexity: {perplexity:.2f}")
+#     model = model.cpu()
+
+# print()
+# print("Lower perplexity = better prediction")
+# print("(Perplexity measures how 'surprised' the model is by the actual next token)")
