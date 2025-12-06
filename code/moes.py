@@ -145,7 +145,7 @@ class MoE(nn.Module):
 
 
         # naive version, apply all experts to all tokens
-        if device.type != "cuda":
+        if device.type != "cuda" or device.type == "cuda":
             expert_outputs_NMD = torch.stack([expert(x_MD) for expert in self.experts], dim=0)
             expert_weights_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device)
             expert_weights_MN.scatter_(1, idx_MK, val_MK)
