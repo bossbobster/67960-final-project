@@ -109,7 +109,7 @@ class MoE(nn.Module):
         self.bias_rate = bias_rate
         assert self.K <= self.N, "K must be less than or equal to N"
 
-        if device.type == "cuda":
+        if device.type == "1234":
             self.momoe = MoMoE(
                 embedding_dim=D, 
                 intermediate_dim=H,
