@@ -174,7 +174,7 @@ class MoE(nn.Module):
         # update biases
         if self.training:
             with torch.no_grad():
-                self.biases_N -= self.bias_rate * (counts_N - counts_N.mean()).sign()
+                self.biases_N -= self.bias_rate * (counts_N - counts_N.float().mean()).sign()
 
         return einops.rearrange(y_MD, "(B S) D -> B S D", B=B, S=S)
 
