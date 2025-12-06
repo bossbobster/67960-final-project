@@ -22,8 +22,8 @@ if device.type == "cpu" and torch.backends.mps.is_available():
 if device.type == "cuda" or device.type == "cpu":
     torch.manual_seed(67960)
 
-B = 64
-V = 256
+B = 128
+V = 1024
 
 print(f"Using device: {device}")
 
@@ -34,13 +34,13 @@ from tokenizers import Tokenizer, models, pre_tokenizers, trainers
 import torch
 
 # load dataset
-print("Loading AG News dataset...", flush=True)
+print("Loading AG News dataset...")
 dataset = load_dataset("ag_news")
 train_data = dataset['train']
 test_data = dataset['test']
 
 # Train a simple BPE tokenizer on AG News (vocab V)
-print("Training BPE tokenizer with vocab_size=V...", flush=True)
+print("Training BPE tokenizer with vocab_size=V...")
 tokenizer_obj = Tokenizer(models.BPE())
 tokenizer_obj.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
 
@@ -69,8 +69,8 @@ class SimpleTokenizer:
 tokenizer = SimpleTokenizer(tokenizer_obj)
 vocab_size = tokenizer_obj.get_vocab_size()
 
-print(f"Vocab size: {vocab_size}", flush=True)
-print(f"Train samples: {len(train_data)}, Test samples: {len(test_data)}", flush=True)
+print(f"Vocab size: {vocab_size}")
+print(f"Train samples: {len(train_data)}, Test samples: {len(test_data)}")
 
 # dataset class
 class TextDataset(torch.utils.data.Dataset):
@@ -97,20 +97,20 @@ test_dataset = TextDataset(test_data, max_len=128)
 train_loader = DataLoader(train_dataset, batch_size=B, shuffle=True, num_workers=0)
 test_loader = DataLoader(test_dataset, batch_size=B, shuffle=False, num_workers=0)
 
-print("\n*Data done loading*", flush=True)
+print("\n*Data done loading*")
 
 
 
-D = 64
-H = 128
+D = 128
+H = 256
 N = 32
 K = 4
 V = vocab_size
-n_heads = 16
+n_heads = 8
 n_layers = 6
 max_seq_len = 128
 
-print(f"D: {D}\n H: {H}\n N: {N}\n K: {K}\n V: {V}\n n_heads: {n_heads}\n n_layers: {n_layers}\n max_seq_len: {max_seq_len}", flush=True)
+print(f"D: {D}\n H: {H}\n N: {N}\n K: {K}\n V: {V}\n n_heads: {n_heads}\n n_layers: {n_layers}\n max_seq_len: {max_seq_len}")
 
 # create models
 moe_fns = [
@@ -123,7 +123,7 @@ models = [Transformer(V, D, n_heads, n_layers, moe_fn, max_seq_len).to(device) f
 
 # print number of parameters in each model
 for i, model in enumerate(models):
-    print(f"Model {i+1} ({moe_fns[i]().__class__.__name__}) has {sum(p.numel() for p in model.parameters())} parameters and {sum(p.numel() for p in model.parameters() if p.requires_grad)} trainable parameters", flush=True)
+    print(f"Model {i+1} ({moe_fns[i]().__class__.__name__}) has {sum(p.numel() for p in model.parameters())} parameters and {sum(p.numel() for p in model.parameters() if p.requires_grad)} trainable parameters")
 
 
 def train_epoch(model, loader, optimizer, device):
@@ -132,7 +132,7 @@ def train_epoch(model, loader, optimizer, device):
     total_loss = 0
     num_batches = 0
 
-    print(f"{len(loader)} batches to process...", flush=True)
+    print(f"{len(loader)} batches to process...")
     
     for x, y, mask in loader:
         x, y, mask = x.to(device), y.to(device), mask.to(device)
@@ -155,7 +155,7 @@ def train_epoch(model, loader, optimizer, device):
         total_loss += loss.item()
         num_batches += 1
         if num_batches % 100 == 0:
-            print(f"Processed {num_batches} batches...", flush=True)
+            print(f"Processed {num_batches} batches...")
     return total_loss / num_batches
 
 @torch.no_grad()
@@ -204,7 +204,7 @@ for i, (model, name) in enumerate(zip(models, model_names)):
         test_losses.append(test_loss)
         
         epoch_time = time.time() - start_time
-        print(f"Epoch {epoch+1}/{num_epochs} | Train Loss: {train_loss:.4f} | Test Loss: {test_loss:.4f} | Time: {epoch_time:.2f}s", flush=True)
+        print(f"Epoch {epoch+1}/{num_epochs} | Train Loss: {train_loss:.4f} | Test Loss: {test_loss:.4f} | Time: {epoch_time:.2f}s")
     
     results[name] = {
         'train_losses': train_losses,
@@ -217,11 +217,11 @@ for i, (model, name) in enumerate(zip(models, model_names)):
     model = model.cpu()
 
 # Print summary
-print(f"\n{'='*60}", flush=True)
+print(f"\n{'='*60}")
 print("FINAL RESULTS")
-print(f"{'='*60}", flush=True)
+print(f"{'='*60}")
 for name, res in results.items():
-    print(f"{name:20s} | Train: {res['final_train_loss']:.4f} | Test: {res['final_test_loss']:.4f}", flush=True)
+    print(f"{name:20s} | Train: {res['final_train_loss']:.4f} | Test: {res['final_test_loss']:.4f}")
 
 # Plot results
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
@@ -250,7 +250,7 @@ plt.show()
 for i in range(len(models)):
     model = models[i]
     for j, blk in enumerate(model.blocks):
-        print(f"Model {i+1} ({model.moe_fn().__class__.__name__}), Layer {j+1}: {blk.moe.biases_N}", flush=True)
+        print(f"Model {i+1} ({model.moe_fn().__class__.__name__}), Layer {j+1}: {blk.moe.biases_N}")
 
 
 
@@ -258,9 +258,9 @@ for i in range(len(models)):
 # Test perplexity on a single example
 test_idx = 0
 test_text = test_data[test_idx]['text']
-print(f"Test example {test_idx}:", flush=True)
-print(f"Text: {test_text[:200]}...", flush=True)
-print(flush=True)
+print(f"Test example {test_idx}:")
+print(f"Text: {test_text[:200]}...")
+print()
 
 # Tokenize
 encoding = tokenizer(test_text, truncation=True, max_length=129, 
@@ -271,9 +271,9 @@ y = tokens[1:].unsqueeze(0).to(device)   # [1, 128]
 mask = (x != tokenizer.pad_token_id)
 
 # Test each model
-print("="*60, flush=True)
-print("PERPLEXITY RESULTS", flush=True)
-print("="*60, flush=True)
+print("="*60)
+print("PERPLEXITY RESULTS")
+print("="*60)
 
 for model, name in zip(models, model_names):
     model = model.to(device)
@@ -285,9 +285,9 @@ for model, name in zip(models, model_names):
                                ignore_index=tokenizer.pad_token_id, reduction='mean')
         perplexity = torch.exp(loss).item()
     
-    print(f"{name:20s} | Loss: {loss.item():.4f} | Perplexity: {perplexity:.2f}", flush=True)
+    print(f"{name:20s} | Loss: {loss.item():.4f} | Perplexity: {perplexity:.2f}")
     model = model.cpu()
 
-print(flush=True)
-print("Lower perplexity = better prediction", flush=True)
-print("(Perplexity measures how 'surprised' the model is by the actual next token)", flush=True)
+print()
+print("Lower perplexity = better prediction")
+print("(Perplexity measures how 'surprised' the model is by the actual next token)")

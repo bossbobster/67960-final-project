@@ -29,4 +29,4 @@ else
     echo "WARNING: Virtual environment not found at $PROJECT_ROOT/.venv"
 fi
 
-python "$SCRIPT_DIR/code/exp.py"
+python -u "$SCRIPT_DIR/code/exp.py"
