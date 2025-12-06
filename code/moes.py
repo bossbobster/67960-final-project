@@ -13,6 +13,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import einops
 import math
+device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
+if device.type == "cuda":
+    from MoMoE import MoMoE
 
 """
 Dimension Key:
@@ -105,7 +108,19 @@ class MoE(nn.Module):
         self.K = K
         self.bias_rate = bias_rate
         assert self.K <= self.N, "K must be less than or equal to N"
-        self.experts = nn.ModuleList([SwiGLUMLP(D, H) for _ in range(N)])
+
+        if device.type == "cuda":
+            self.momoe = MoMoE(
+                embedding_dim=D, 
+                intermediate_dim=H,
+                num_experts=N,
+                num_chosen_experts=K,
+                save_percent=100,
+                Wl1_ND2H=None,
+                Wl2_NHD=None,
+            )
+        else:
+            self.experts = nn.ModuleList([SwiGLUMLP(D, H) for _ in range(N)])
         self.router = router
         self.register_buffer("biases_N", torch.zeros(N))
 
@@ -130,13 +145,24 @@ class MoE(nn.Module):
 
 
         # naive version, apply all experts to all tokens
-        expert_outputs_NMD = torch.stack([expert(x_MD) for expert in self.experts], dim=0)
-        expert_weights_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device)
-        expert_weights_MN.scatter_(1, idx_MK, val_MK)
-        y_MD = torch.einsum('mn,nmd->md', expert_weights_MN, expert_outputs_NMD)
+        if device.type != "cuda":
+            expert_outputs_NMD = torch.stack([expert(x_MD) for expert in self.experts], dim=0)
+            expert_weights_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device)
+            expert_weights_MN.scatter_(1, idx_MK, val_MK)
+            y_MD = torch.einsum('mn,nmd->md', expert_weights_MN, expert_outputs_NMD)
+            counts_N = torch.bincount(idx_MK.flatten(), minlength=self.N).float()
+        else:
+            s_NM = einops.rearrange(scores_BSN, "B S N -> (B S) N")
+            mask_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device)
+            mask_MN.scatter_(1, idx_MK, 1)
+            mask_NM = mask_MN.T
+            y_BSD, counts_N = self.momoe(x_BSD, mask_NM, s_NM)
+            y_MD = einops.rearrange(y_BSD, "B S D -> (B S) D")
 
 
-        # sparse version, works faster in theory but slower on mps with small params
+
+
+        # # sparse version, works faster in theory but slower on mps with small params
         # y_MD = torch.zeros_like(x_MD)
         # for i, expert in enumerate(self.experts):
         #     mask_MK = (idx_MK == i)
@@ -145,13 +171,9 @@ class MoE(nn.Module):
         #     y_MD.index_add_(0, tok_idx, val_MK[tok_idx, k_idx][:, None] * out)
 
 
-
-
-
         # update biases
         if self.training:
             with torch.no_grad():
-                counts_N = torch.bincount(idx_MK.flatten(), minlength=self.N).float()
                 self.biases_N -= self.bias_rate * (counts_N - counts_N.mean()).sign()
 
         return einops.rearrange(y_MD, "(B S) D -> B S D", B=B, S=S)
