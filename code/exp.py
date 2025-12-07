@@ -13,7 +13,7 @@ import seaborne as sns
 import time
 
 from transformer import Transformer
-from moes import RegularMoE, RandomMoE, OrthogonalMoE, HashMoE
+from moes import RegularMoE, RandomMoE, OrthogonalMoE, HashMoE, ShittyMoE, NonLinearMoE
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if device.type == "cpu" and torch.backends.mps.is_available():
@@ -121,10 +121,12 @@ print(f"D: {D}\n H: {H}\n N: {N}\n K: {K}\n V: {V}\n n_heads: {n_heads}\n n_laye
 
 # create models
 moe_fns = [
-    lambda: RegularMoE(D, H, N, K),
-    lambda: RandomMoE(D, H, N, K),
-    lambda: OrthogonalMoE(D, H, N, K),
-    lambda: HashMoE(D, H, N, K)
+    # lambda: RegularMoE(D, H, N, K),
+    # lambda: RandomMoE(D, H, N, K),
+    # lambda: OrthogonalMoE(D, H, N, K),
+    # lambda: HashMoE(D, H, N, K),
+    lambda: ShittyMoE(D, H, N, K),
+    lambda: NonLinearMoE(D, H, N, K)
 ]
 models = [Transformer(V, D, n_heads, n_layers, moe_fn, max_seq_len).to(device) for moe_fn in moe_fns]
 model_names = [moe_fns[i]().__class__.__name__ for i in range(len(moe_fns))]

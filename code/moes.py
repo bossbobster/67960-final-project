@@ -95,6 +95,28 @@ class HashRouter(nn.Module):
     def forward(self, x_BSD):
         return x_BSD @ self.W_DN
 
+class ShittyRouter(nn.Module):
+    def __init__(self, D, N):
+        super().__init__()
+        self.gate = nn.Linear(D, N)
+        self.gate.weight.data.fill_(1.0)
+        self.gate.bias.data.zero_()
+    def forward(self, x_BSD):
+        return self.gate(x_BSD)
+
+class NonLinearRouter(nn.Module):
+    def __init__(self, D, N):
+        super().__init__()
+        self.lin1 = nn.Linear(D, 2*N)
+        self.lin2 = nn.Linear(N, N)
+        self.lin1.weight.data.normal_(0, 1/math.sqrt(D))
+        self.lin1.bias.data.zero_()
+        self.lin2.weight.data.normal_(0, 1/math.sqrt(N))
+        self.lin2.bias.data.zero_()
+    
+    def forward(self, x_BSD):
+        a_BSN, b_BSN = self.lin1(x_BSD).chunk(2, dim=-1)
+        return self.lin2(F.silu(a_BSN) * b_BSN)
 
 """
 MoE Base Class
@@ -197,3 +219,11 @@ class OrthogonalMoE(MoE):
 class HashMoE(MoE):
     def __init__(self, D, H, N, K):
         super().__init__(D, H, N, K, HashRouter(D, N))
+
+class ShittyMoE(MoE):
+    def __init__(self, D, H, N, K):
+        super().__init__(D, H, N, K, ShittyRouter(D, N))
+
+class NonLinearMoE(MoE):
+    def __init__(self, D, H, N, K):
+        super().__init__(D, H, N, K, NonLinearRouter(D, N))
