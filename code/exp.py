@@ -30,7 +30,7 @@ print(f"Using device: {device}")
 
 from datasets import load_dataset
 from torch.utils.data import DataLoader
-from tokenizers import Tokenizer, models, pre_tokenizers, trainers
+from tokenizers import Tokenizer, models, pre_tokenizers, trainers, processors, decoders
 import torch
 
 # load dataset
@@ -43,6 +43,7 @@ test_data = dataset['test']
 print("Training BPE tokenizer with vocab_size=V...")
 tokenizer_obj = Tokenizer(models.BPE())
 tokenizer_obj.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=False)
+tokenizer_obj.decoder = decoders.ByteLevel()
 
 # Train on first 10k samples (fast: ~10 seconds)
 trainer = trainers.BpeTrainer(vocab_size=V, special_tokens=["<PAD>", "<UNK>"])
@@ -50,6 +51,13 @@ tokenizer_obj.train_from_iterator(
     (train_data[i]['text'] for i in range(min(10000, len(train_data)))),
     trainer=trainer
 )
+
+# Add post-processor to handle byte-level decoding properly
+tokenizer_obj.post_processor = processors.ByteLevel(trim_offsets=False)
+
+# Save tokenizer for later use
+tokenizer_obj.save("tokenizer.json")
+print("Saved tokenizer to tokenizer.json")
 
 # Simple wrapper to match expected API
 class SimpleTokenizer:
@@ -98,7 +106,6 @@ train_loader = DataLoader(train_dataset, batch_size=B, shuffle=True, num_workers
 test_loader = DataLoader(test_dataset, batch_size=B, shuffle=False, num_workers=0)
 
 print("\n*Data done loading*")
-
 
 
 D = 256
