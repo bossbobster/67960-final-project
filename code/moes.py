@@ -170,12 +170,12 @@ class MoE(nn.Module):
 
 
         # naive version, apply all experts to all tokens
-        if device.type != "cuda" or device.type == "cuda":
-            expert_outputs_NMD = torch.stack([expert(x_MD) for expert in self.experts], dim=0)
-            expert_weights_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device)
-            expert_weights_MN.scatter_(1, idx_MK, val_MK.float())
-            y_MD = torch.einsum('mn,nmd->md', expert_weights_MN, expert_outputs_NMD)
-            counts_N = torch.bincount(idx_MK.flatten(), minlength=self.N).float()
+        # if device.type != "cuda":
+        expert_outputs_NMD = torch.stack([expert(x_MD) for expert in self.experts], dim=0)
+        expert_weights_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device)
+        expert_weights_MN.scatter_(1, idx_MK, val_MK.float())
+        y_MD = torch.einsum('mn,nmd->md', expert_weights_MN, expert_outputs_NMD)
+        counts_N = torch.bincount(idx_MK.flatten(), minlength=self.N).float()
         # else:
         #     s_NM = einops.rearrange(scores_BSN, "B S N -> N (B S)")
         #     mask_MN = torch.zeros(x_MD.size(0), self.N, device=x_MD.device, dtype=torch.int32)
