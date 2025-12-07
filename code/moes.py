@@ -77,7 +77,7 @@ class RandomRouter(nn.Module):
 class OrthogonalRouter(nn.Module):
     def __init__(self, D, N):
         super().__init__()
-        # random semi-orthogonal matrix
+        # random semi-orthogonal matrix (fixed, no gradients)
         W_DN = torch.randn(D, N) / math.sqrt(D)
         W_DN = torch.linalg.qr(W_DN)[0][:, :N]
         self.register_buffer('W_DN', W_DN)
@@ -88,7 +88,7 @@ class OrthogonalRouter(nn.Module):
 class HashRouter(nn.Module):
     def __init__(self, D, N):
         super().__init__()
-        # random unit-norm hyperplanes
+        # random unit-norm hyperplanes (fixed, no gradients)
         W_DN = torch.randn(D, N)
         W_DN = W_DN / W_DN.norm(dim=0, keepdim=True)
         self.register_buffer('W_DN', W_DN)
@@ -101,6 +101,7 @@ class ShittyRouter(nn.Module):
         self.gate = nn.Linear(D, N)
         self.gate.weight.data.fill_(1.0)
         self.gate.bias.data.zero_()
+        self.gate.requires_grad_(False)  # freeze weights
     def forward(self, x_BSD):
         return self.gate(x_BSD)
 
@@ -113,6 +114,8 @@ class NonLinearRouter(nn.Module):
         self.lin1.bias.data.zero_()
         self.lin2.weight.data.normal_(0, 1/math.sqrt(N))
         self.lin2.bias.data.zero_()
+        self.lin1.requires_grad_(False)  # freeze weights
+        self.lin2.requires_grad_(False)
     
     def forward(self, x_BSD):
         a_BSN, b_BSN = self.lin1(x_BSD).chunk(2, dim=-1)
