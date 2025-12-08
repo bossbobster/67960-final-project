@@ -95,7 +95,7 @@ class HashRouter(nn.Module):
     def forward(self, x_BSD):
         return x_BSD @ self.W_DN
 
-class ShittyRouter(nn.Module):
+class UniformRouter(nn.Module):
     def __init__(self, D, N):
         super().__init__()
         self.gate = nn.Linear(D, N)
@@ -223,9 +223,9 @@ class HashMoE(MoE):
     def __init__(self, D, H, N, K):
         super().__init__(D, H, N, K, HashRouter(D, N))
 
-class ShittyMoE(MoE):
+class UniformMoE(MoE):
     def __init__(self, D, H, N, K):
-        super().__init__(D, H, N, K, ShittyRouter(D, N))
+        super().__init__(D, H, N, K, UniformRouter(D, N))
 
 class NonLinearMoE(MoE):
     def __init__(self, D, H, N, K):

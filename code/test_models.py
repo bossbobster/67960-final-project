@@ -5,7 +5,7 @@ Test script to load saved models and run text generation.
 import torch
 import torch.nn.functional as F
 from transformer import Transformer
-from moes import RegularMoE, RandomMoE, OrthogonalMoE, HashMoE, ShittyMoE, NonLinearMoE
+from moes import RegularMoE, RandomMoE, OrthogonalMoE, HashMoE, UniformMoE, NonLinearMoE
 from tokenizers import Tokenizer
 import glob
 import os
@@ -48,7 +48,7 @@ MOE_CLASSES = {
     'RandomMoE': RandomMoE,
     'OrthogonalMoE': OrthogonalMoE,
     'HashMoE': HashMoE,
-    'ShittyMoE': ShittyMoE,
+    'UniformMoE': UniformMoE,
     'NonLinearMoE': NonLinearMoE,
 }
 
