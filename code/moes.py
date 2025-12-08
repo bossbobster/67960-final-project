@@ -197,7 +197,7 @@ class MoE(nn.Module):
 
 
         # update biases
-        if self.training and self.router.__class__.__name__ == "RegularRouter":
+        if self.training:
             with torch.no_grad():
                 self.biases_N -= self.bias_rate * (counts_N - counts_N.float().mean()).sign()
 
