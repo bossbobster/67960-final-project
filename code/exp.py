@@ -245,23 +245,23 @@ for name, res in results.items():
     ax1.plot(range(1, num_epochs+1), res['train_losses'], marker='o', label=name)
     ax2.plot(range(1, num_epochs+1), res['test_losses'], marker='o', label=name)
 
-ax1.set_xlabel('Epoch')
-ax1.set_ylabel('Loss')
-ax1.set_title('Training Loss')
-ax1.legend()
-ax1.grid(True, alpha=0.3)
+# ax1.set_xlabel('Epoch')
+# ax1.set_ylabel('Loss')
+# ax1.set_title('Training Loss')
+# ax1.legend()
+# ax1.grid(True, alpha=0.3)
 
-ax2.set_xlabel('Epoch')
-ax2.set_ylabel('Loss')
-ax2.set_title('Test Loss')
-ax2.legend()
-ax2.grid(True, alpha=0.3)
+# ax2.set_xlabel('Epoch')
+# ax2.set_ylabel('Loss')
+# ax2.set_title('Test Loss')
+# ax2.legend()
+# ax2.grid(True, alpha=0.3)
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
 
-# save the plot results
-plt.savefig("plots/loss_plot.png")
+# # save the plot results
+# plt.savefig("plots/loss_plot.png")
 
 
 
