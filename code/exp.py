@@ -229,7 +229,7 @@ for i, (model, name) in enumerate(zip(models, model_names)):
     }
     
     # Move back to CPU to free memory
-    model = model.cpu()
+    # model = model.cpu()
 
 # Print summary
 print(f"\n{'='*60}")
